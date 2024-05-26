@@ -1,4 +1,3 @@
-import sys
 import argparse
 import ffmpeg
 
@@ -9,8 +8,6 @@ parser = argparse.ArgumentParser(
     description='Process dashcam videos, overlaying rear-view camera video onto base front-view video.  Built for Viofo A139, but should work for arbitrary videos.'
 )
 
-base_video_filename = sys.argv[1]    # Get path to base video file
-overlay_video_filename = sys.argv[2] 
 parser.add_argument('base', help='Base video file.')
 parser.add_argument('overlay', help='Video file to overlay on top.')
 parser.add_argument(
@@ -54,10 +51,10 @@ args = parser.parse_args()
 
 
 # Get video resolutions using ffmpeg,probe
-base_video_stream = next((stream for stream in ffmpeg.probe(base_video_filename)['streams'] if stream['codec_type'] == 'video'), None)
+base_video_stream = next((stream for stream in ffmpeg.probe(args.base)['streams'] if stream['codec_type'] == 'video'), None)
 base_res = {'x': int(base_video_stream['width']), 'y': int(base_video_stream['height'])}
 
-overlay_video_stream = next((stream for stream in ffmpeg.probe(overlay_video_filename)['streams'] if stream['codec_type'] == 'video'), None)
+overlay_video_stream = next((stream for stream in ffmpeg.probe(args.overlay)['streams'] if stream['codec_type'] == 'video'), None)
 overlay_res = {'x': int(overlay_video_stream['width']), 'y': int(overlay_video_stream['height'])}
 
 
@@ -69,7 +66,7 @@ overlay_y_pos = base_res['y'] * (args.overlay_position / 100)
 # Determine how to crop overlay video
 overlay_crop_origin_x = 0
 overlay_crop_origin_y = (overlay_res['y'] / 2) - (overlay_res['y'] / 2) * (args.overlay_height / 100)
-overlay_crop_width = overlay_res['x']
+overlay_crop_width  = overlay_res['x']
 overlay_crop_height = overlay_res['y'] - (overlay_crop_origin_y*2)
 
 
@@ -78,9 +75,9 @@ overlay_scaled_width = base_res['x'] * (args.overlay_width / 100)
 
 
 # Get the video files, and do cropping and scaling etc
-base_file = ffmpeg.input(base_video_filename)
+base_file = ffmpeg.input(args.base)
 overlay_file = (
-    ffmpeg.input(overlay_video_filename)
+    ffmpeg.input(args.overlay)
         .filter('crop', overlay_crop_width, overlay_crop_height, overlay_crop_origin_x, overlay_crop_origin_y)
         .filter('scale', overlay_scaled_width, -1)
     )
@@ -97,7 +94,7 @@ overlay_filter = (
 command = ffmpeg.output(
     overlay_filter, 
     base_file.audio, 
-    'overlayed-'+args.output_quality+base_video_filename, 
+    'overlayed-'+args.output_quality+args.base,
     preset=args.output_quality
 )
 
